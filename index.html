@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizador de XML do NMAP</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #f8fafc;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .upload-area:hover {
+            background-color: #e8f4fd;
+        }
+        .upload-area p {
+            color: #7f8c8d;
+            margin: 10px 0;
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+        }
+        .scan-info {
+            background-color: #f1f8ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            border-left: 4px solid #3498db;
+        }
+        .host {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            overflow: hidden;
+        }
+        .host-header {
+            background-color: #eaeaea;
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .host-header h3 {
+            margin: 0;
+        }
+        .host-body {
+            padding: 15px;
+            display: none;
+        }
+        .port {
+            border-bottom: 1px solid #eee;
+            padding: 8px 0;
+        }
+        .port:last-child {
+            border-bottom: none;
+        }
+        .port-open {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .port-closed {
+            color: #e74c3c;
+        }
+        .port-filtered {
+            color: #f39c12;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+        .status-up {
+            background-color: #d5f5e3;
+            color: #27ae60;
+        }
+        .status-down {
+            background-color: #fadbd8;
+            color: #e74c3c;
+        }
+        .table-container {
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            padding: 8px 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .details-section {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        .loading {
+            text-align: center;
+            padding: 20px;
+            display: none;
+        }
+        .error {
+            color: #e74c3c;
+            background-color: #fadbd8;
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .summary {
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+        }
+        .summary-box {
+            background-color: #fff;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 15px;
+            margin-bottom: 10px;
+            flex: 1;
+            min-width: 200px;
+            margin-right: 10px;
+        }
+        .summary-box:last-child {
+            margin-right: 0;
+        }
+        .summary-box h4 {
+            margin-top: 0;
+            color: #7f8c8d;
+        }
+        .summary-box p {
+            font-size: 24px;
+            font-weight: bold;
+            margin: 0;
+            color: #2c3e50;
+        }
+        .filter-section {
+            margin-bottom: 20px;
+        }
+        .chart-container {
+            margin: 20px 0;
+            height: 300px;
+        }
+        .tab-container {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            display: flex;
+            border-bottom: 1px solid #ddd;
+        }
+        .tab-button {
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #f5f5f5;
+            border: 1px solid #ddd;
+            border-bottom: none;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-button.active {
+            background-color: white;
+            border-bottom: 1px solid white; /* Changed to white to blend with content */
+            margin-bottom: -1px; /* Overlap border */
+        }
+        .tab-content {
+            display: none;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-top: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .os-info {
+            background-color: #fffbf2;
+            padding: 10px;
+            border-left: 4px solid #f1c40f;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Visualizador de XML do NMAP</h1>
+        
+        <div class="upload-area" id="dropArea">
+            <h2>Carregue seu arquivo XML do NMAP</h2>
+            <p>Arraste e solte o arquivo aqui ou clique para selecionar</p>
+            <input type="file" id="fileInput" accept=".xml" style="display: none;">
+            <button class="btn" id="selectFileBtn">Selecionar Arquivo</button>
+        </div>
+        
+        <div class="loading" id="loading">
+            <p>Processando o arquivo...</p>
+        </div>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('dropArea');
+            const fileInput = document.getElementById('fileInput');
+            const selectFileBtn = document.getElementById('selectFileBtn');
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+
+            // Evento para seleção de arquivo via botão
+            selectFileBtn.addEventListener('click', function() {
+                fileInput.click();
+            });
+
+            // Evento para quando um arquivo é selecionado
+            fileInput.addEventListener('change', function() {
+                if (fileInput.files.length > 0) {
+                    handleFile(fileInput.files[0]);
+                }
+            });
+
+            // Eventos para arrastar e soltar
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            function highlight() {
+                dropArea.style.backgroundColor = '#e8f4fd';
+            }
+
+            function unhighlight() {
+                dropArea.style.backgroundColor = '#f8fafc';
+            }
+
+            // Evento para quando o arquivo é solto
+            dropArea.addEventListener('drop', function(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+
+                if (files.length > 0) {
+                    handleFile(files[0]);
+                }
+            });
+
+            // Função para processar o arquivo
+            function handleFile(file) {
+                if (file.type !== 'text/xml' && !file.name.endsWith('.xml')) {
+                    showError('Por favor, selecione um arquivo XML válido do NMAP.');
+                    return;
+                }
+
+                loading.style.display = 'block';
+                result.innerHTML = ''; // Limpa resultados anteriores
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const xmlContent = e.target.result;
+                        const parser = new DOMParser();
+                        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+                        
+                        const parserError = xmlDoc.getElementsByTagName('parsererror');
+                        if (parserError.length > 0) {
+                            // Tenta obter uma mensagem de erro mais específica do parsererror
+                            let errorMsg = 'XML inválido.';
+                            if (parserError[0].childNodes.length > 0 && parserError[0].childNodes[0].nodeName === "div") {
+                                errorMsg += " Detalhes: " + parserError[0].childNodes[0].textContent;
+                            } else if (parserError[0].textContent) {
+                                errorMsg += " Detalhes: " + parserError[0].textContent;
+                            }
+                            throw new Error(errorMsg);
+                        }
+                        
+                        // Verifica se é um arquivo XML do NMAP
+                        const nmapRun = xmlDoc.getElementsByTagName('nmaprun');
+                        if (nmapRun.length === 0) {
+                            throw new Error('Este não parece ser um arquivo XML do NMAP válido (tag <nmaprun> não encontrada).');
+                        }
+                        
+                        displayResults(xmlDoc);
+                    } catch (error) {
+                        showError('Erro ao processar o arquivo: ' + error.message);
+                        console.error("Erro ao processar XML:", error);
+                    } finally {
+                        loading.style.display = 'none';
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showError('Erro ao ler o arquivo.');
+                    loading.style.display = 'none';
+                };
+                
+                reader.readAsText(file);
+            }
+
+            // Função para exibir um erro
+            function showError(message) {
+                result.innerHTML = `<div class="error">${message}</div>`;
+            }
+
+            // Função para exibir os resultados
+            function displayResults(xmlDoc) {
+                // Informações do scan
+                const nmapRun = xmlDoc.getElementsByTagName('nmaprun')[0];
+                const scanInfo = document.createElement('div');
+                scanInfo.className = 'scan-info';
+                
+                const startTime = nmapRun.getAttribute('start');
+                const scanDate = startTime ? new Date(parseInt(startTime) * 1000) : new Date(); // Fallback
+                
+                scanInfo.innerHTML = `
+                    <h2>Informações do Scan</h2>
+                    <p><strong>Versão do NMAP:</strong> ${nmapRun.getAttribute('version') || 'N/A'}</p>
+                    <p><strong>Argumentos:</strong> ${nmapRun.getAttribute('args') || 'N/A'}</p>
+                    <p><strong>Data de início:</strong> ${startTime ? scanDate.toLocaleString() : 'N/A'}</p>
+                `;
+                
+                result.appendChild(scanInfo);
+                
+                // Sumário do scan
+                const hostElements = xmlDoc.getElementsByTagName('host');
+                
+                // Contadores para estatísticas
+                let hostsUp = 0;
+                let hostsDown = 0;
+                let totalPortsFound = 0; // Changed from totalPorts to avoid confusion with all possible ports
+                let openPorts = 0;
+                let closedPorts = 0;
+                let filteredPorts = 0;
+                
+                // Contar hosts e portas
+                for (let i = 0; i < hostElements.length; i++) {
+                    const hostStatusElement = hostElements[i].getElementsByTagName('status')[0];
+                    const hostStatus = hostStatusElement ? hostStatusElement.getAttribute('state') : 'unknown';
+                    
+                    if (hostStatus === 'up') {
+                        hostsUp++;
+                    } else {
+                        hostsDown++;
+                    }
+                    
+                    const ports = hostElements[i].getElementsByTagName('port');
+                    totalPortsFound += ports.length;
+                    
+                    for (let j = 0; j < ports.length; j++) {
+                        const portStateElement = ports[j].getElementsByTagName('state')[0];
+                        const portState = portStateElement ? portStateElement.getAttribute('state') : 'unknown';
+                        
+                        if (portState === 'open') {
+                            openPorts++;
+                        } else if (portState === 'closed') {
+                            closedPorts++;
+                        } else if (portState === 'filtered') {
+                            filteredPorts++;
+                        }
+                    }
+                }
+                
+                // Criar caixa de resumo
+                const summaryDiv = document.createElement('div');
+                summaryDiv.className = 'summary';
+                summaryDiv.innerHTML = `
+                    <div class="summary-box">
+                        <h4>Hosts Escaneados</h4>
+                        <p>${hostElements.length}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Hosts Ativos</h4>
+                        <p>${hostsUp}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Portas Encontradas</h4>
+                        <p>${totalPortsFound}</p>
+                    </div>
+                    <div class="summary-box">
+                        <h4>Portas Abertas</h4>
+                        <p>${openPorts}</p>
+                    </div>
+                `;
+                
+                result.appendChild(summaryDiv);
+                
+                // Guias para diferentes visualizações
+                const tabContainer = document.createElement('div');
+                tabContainer.className = 'tab-container';
+                tabContainer.innerHTML = `
+                    <div class="tab-buttons">
+                        <div class="tab-button active" data-tab="hosts">Hosts (${hostElements.length})</div>
+                        <div class="tab-button" data-tab="ports">Portas (${totalPortsFound})</div>
+                        <div class="tab-button" data-tab="services">Serviços</div>
+                    </div>
+                    <div class="tab-content active" id="hosts-tab"></div>
+                    <div class="tab-content" id="ports-tab"></div>
+                    <div class="tab-content" id="services-tab"></div>
+                `;
+                
+                result.appendChild(tabContainer);
+                
+                // Configurar os botões das guias
+                const tabButtons = tabContainer.querySelectorAll('.tab-button');
+                const tabContents = tabContainer.querySelectorAll('.tab-content');
+                
+                tabButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        tabButtons.forEach(btn => btn.classList.remove('active'));
+                        tabContents.forEach(content => content.classList.remove('active'));
+                        
+                        button.classList.add('active');
+                        document.getElementById(`${button.dataset.tab}-tab`).classList.add('active');
+                    });
+                });
+                
+                // Guia de hosts
+                const hostsTab = document.getElementById('hosts-tab');
+                
+                if (hostElements.length === 0) {
+                    hostsTab.innerHTML = "<p>Nenhum host encontrado no arquivo XML.</p>";
+                } else {
+                    for (let i = 0; i < hostElements.length; i++) {
+                        const host = hostElements[i];
+                        const hostStatusElement = host.getElementsByTagName('status')[0];
+                        const hostStatus = hostStatusElement ? hostStatusElement.getAttribute('state') : 'unknown';
+                        
+                        let ipAddress = '';
+                        let macAddress = '';
+                        let hostname = '';
+                        
+                        const addresses = host.getElementsByTagName('address');
+                        for (let j = 0; j < addresses.length; j++) {
+                            const addrType = addresses[j].getAttribute('addrtype');
+                            if (addrType === 'ipv4' || addrType === 'ipv6') {
+                                ipAddress = addresses[j].getAttribute('addr') || ipAddress;
+                            } else if (addrType === 'mac') {
+                                macAddress = addresses[j].getAttribute('addr') || '';
+                                const vendor = addresses[j].getAttribute('vendor');
+                                if (vendor) {
+                                    macAddress += ` (${vendor})`;
+                                }
+                            }
+                        }
+                        if (!ipAddress) ipAddress = "N/A"; // Fallback if no IP found
+                        
+                        const hostnamesElement = host.getElementsByTagName('hostnames')[0];
+                        if (hostnamesElement) {
+                            const hostnameTag = hostnamesElement.getElementsByTagName('hostname')[0];
+                            if (hostnameTag) {
+                                hostname = hostnameTag.getAttribute('name') || '';
+                            }
+                        }
+                        
+                        const hostDiv = document.createElement('div');
+                        hostDiv.className = 'host';
+                        
+                        const hostHeader = document.createElement('div');
+                        hostHeader.className = 'host-header';
+                        
+                        const statusClass = hostStatus === 'up' ? 'status-up' : (hostStatus === 'down' ? 'status-down' : '');
+                        
+                        hostHeader.innerHTML = `
+                            <h3>${ipAddress}${hostname ? ' (' + hostname + ')' : ''}</h3>
+                            <span class="status-badge ${statusClass}">${hostStatus.toUpperCase()}</span>
+                        `;
+                        
+                        const hostBody = document.createElement('div');
+                        hostBody.className = 'host-body';
+                        
+                        let hostInfo = `<p><strong>IP:</strong> ${ipAddress}</p>`;
+                        if (macAddress) hostInfo += `<p><strong>MAC:</strong> ${macAddress}</p>`;
+                        if (hostname) hostInfo += `<p><strong>Hostname:</strong> ${hostname}</p>`;
+                        
+                        const osElements = host.getElementsByTagName('os');
+                        if (osElements.length > 0) {
+                            const osMatchElements = osElements[0].getElementsByTagName('osmatch');
+                            if (osMatchElements.length > 0) {
+                                const bestMatch = osMatchElements[0]; // Nmap often sorts best match first
+                                hostInfo += `<div class="os-info">`;
+                                hostInfo += `<p><strong>Sistema Operacional (Estimado):</strong> ${bestMatch.getAttribute('name') || 'N/A'}`;
+                                if (bestMatch.getAttribute('accuracy')) {
+                                    hostInfo += ` (${bestMatch.getAttribute('accuracy')}% de certeza)`;
+                                }
+                                hostInfo += `</p>`;
+                                
+                                const osClassElements = bestMatch.getElementsByTagName('osclass');
+                                if (osClassElements.length > 0) {
+                                    const osClass = osClassElements[0];
+                                    hostInfo += `<p><strong>Tipo:</strong> ${osClass.getAttribute('type') || 'N/A'}</p>`;
+                                    hostInfo += `<p><strong>Fornecedor:</strong> ${osClass.getAttribute('vendor') || 'N/A'}</p>`;
+                                    hostInfo += `<p><strong>Família:</strong> ${osClass.getAttribute('osfamily') || 'N/A'}</p>`;
+                                    hostInfo += `<p><strong>Geração:</strong> ${osClass.getAttribute('osgen') || 'N/A'}</p>`;
+                                }
+                                hostInfo += `</div>`;
+                            }
+                        }
+                        
+                        hostBody.innerHTML += hostInfo;
+                        
+                        const ports = host.getElementsByTagName('port');
+                        if (ports.length > 0) {
+                            hostBody.innerHTML += `<h4>Portas e Serviços</h4>`;
+                            const tableContainer = document.createElement('div');
+                            tableContainer.className = 'table-container';
+                            const table = document.createElement('table');
+                            table.innerHTML = `
+                                <thead>
+                                    <tr>
+                                        <th>Porta</th>
+                                        <th>Protocolo</th>
+                                        <th>Estado</th>
+                                        <th>Serviço</th>
+                                        <th>Produto/Versão</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            `;
+                            const tbody = table.querySelector('tbody');
+                            
+                            for (let j = 0; j < ports.length; j++) {
+                                const port = ports[j];
+                                const portId = port.getAttribute('portid');
+                                const protocol = port.getAttribute('protocol');
+                                const stateElement = port.getElementsByTagName('state')[0];
+                                const state = stateElement ? stateElement.getAttribute('state') : 'unknown';
+                                
+                                let serviceName = '';
+                                let versionInfo = '';
+                                
+                                const serviceElement = port.getElementsByTagName('service')[0];
+                                if (serviceElement) {
+                                    serviceName = serviceElement.getAttribute('name') || '';
+                                    const product = serviceElement.getAttribute('product') || '';
+                                    const ver = serviceElement.getAttribute('version') || '';
+                                    const extrainfo = serviceElement.getAttribute('extrainfo') || '';
+                                    
+                                    versionInfo = [product, ver, extrainfo].filter(Boolean).join(' ');
+                                }
+                                
+                                const row = document.createElement('tr');
+                                let stateClass = '';
+                                if (state === 'open') stateClass = 'port-open';
+                                else if (state === 'closed') stateClass = 'port-closed';
+                                else if (state === 'filtered') stateClass = 'port-filtered';
+                                
+                                row.innerHTML = `
+                                    <td>${portId}</td>
+                                    <td>${protocol}</td>
+                                    <td class="${stateClass}">${state}</td>
+                                    <td>${serviceName}</td>
+                                    <td>${versionInfo}</td>
+                                `;
+                                tbody.appendChild(row);
+                            }
+                            tableContainer.appendChild(table);
+                            hostBody.appendChild(tableContainer);
+                        } else {
+                            hostBody.innerHTML += `<p>Nenhuma porta escaneada ou detectada para este host.</p>`;
+                        }
+                        
+                        const scriptElements = host.getElementsByTagName('script'); // NSE scripts at host level
+                        const hostscripts = host.getElementsByTagName('hostscript'); // Sometimes scripts are under <hostscript>
+                        
+                        let allScripts = Array.from(scriptElements);
+                        if (hostscripts.length > 0) {
+                           allScripts = allScripts.concat(Array.from(hostscripts[0].getElementsByTagName('script')));
+                        }
+
+                        if (allScripts.length > 0) {
+                            hostBody.innerHTML += `<h4>Resultados de Scripts NSE</h4>`;
+                            const scriptsDiv = document.createElement('div');
+                            scriptsDiv.className = 'details-section';
+                            
+                            for (let j = 0; j < allScripts.length; j++) {
+                                const script = allScripts[j];
+                                const scriptId = script.getAttribute('id');
+                                const output = script.getAttribute('output');
+                                if (scriptId && output) {
+                                    scriptsDiv.innerHTML += `
+                                        <div class="port"> <!-- Reusing .port class for styling -->
+                                            <strong>${scriptId}:</strong>
+                                            <pre style="white-space: pre-wrap; word-break: break-all; margin-top: 5px;">${output.trim()}</pre>
+                                        </div>
+                                    `;
+                                }
+                            }
+                            hostBody.appendChild(scriptsDiv);
+                        }
+                        
+                        hostDiv.appendChild(hostHeader);
+                        hostDiv.appendChild(hostBody);
+                        hostsTab.appendChild(hostDiv);
+                        
+                        hostHeader.addEventListener('click', function() {
+                            hostBody.style.display = hostBody.style.display === 'block' ? 'none' : 'block';
+                        });
+                    }
+                }
+                
+                // Guia de portas
+                const portsTab = document.getElementById('ports-tab');
+                const allPortsTableContainer = document.createElement('div');
+                allPortsTableContainer.className = 'table-container';
+                
+                if (totalPortsFound === 0) {
+                     portsTab.innerHTML = "<p>Nenhuma porta encontrada no scan.</p>";
+                } else {
+                    allPortsTableContainer.innerHTML = `
+                        <h3>Todas as Portas Encontradas (${totalPortsFound})</h3>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>IP do Host</th>
+                                    <th>Porta</th>
+                                    <th>Protocolo</th>
+                                    <th>Estado</th>
+                                    <th>Serviço</th>
+                                    <th>Produto/Versão</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    `;
+                    const allPortsTableBody = allPortsTableContainer.querySelector('tbody');
+                    
+                    for (let i = 0; i < hostElements.length; i++) {
+                        const host = hostElements[i];
+                        let ipAddress = '';
+                        const addresses = host.getElementsByTagName('address');
+                        for (let j = 0; j < addresses.length; j++) {
+                            if (addresses[j].getAttribute('addrtype') === 'ipv4' || addresses[j].getAttribute('addrtype') === 'ipv6') {
+                                ipAddress = addresses[j].getAttribute('addr');
+                                break;
+                            }
+                        }
+                        if (!ipAddress) ipAddress = "N/A";
+                        
+                        const ports = host.getElementsByTagName('port');
+                        for (let j = 0; j < ports.length; j++) {
+                            const port = ports[j];
+                            const portId = port.getAttribute('portid');
+                            const protocol = port.getAttribute('protocol');
+                            const stateElement = port.getElementsByTagName('state')[0];
+                            const state = stateElement ? stateElement.getAttribute('state') : 'unknown';
+                            
+                            let serviceName = '';
+                            let versionInfo = '';
+                            const serviceElement = port.getElementsByTagName('service')[0];
+                            if (serviceElement) {
+                                serviceName = serviceElement.getAttribute('name') || '';
+                                const product = serviceElement.getAttribute('product') || '';
+                                const ver = serviceElement.getAttribute('version') || '';
+                                const extrainfo = serviceElement.getAttribute('extrainfo') || '';
+                                versionInfo = [product, ver, extrainfo].filter(Boolean).join(' ');
+                            }
+                            
+                            const row = document.createElement('tr');
+                            let stateClass = '';
+                            if (state === 'open') stateClass = 'port-open';
+                            else if (state === 'closed') stateClass = 'port-closed';
+                            else if (state === 'filtered') stateClass = 'port-filtered';
+                            
+                            row.innerHTML = `
+                                <td>${ipAddress}</td>
+                                <td>${portId}</td>
+                                <td>${protocol}</td>
+                                <td class="${stateClass}">${state}</td>
+                                <td>${serviceName}</td>
+                                <td>${versionInfo}</td>
+                            `;
+                            allPortsTableBody.appendChild(row);
+                        }
+                    }
+                    portsTab.appendChild(allPortsTableContainer);
+                }
+
+                // Guia de serviços
+                const servicesTab = document.getElementById('services-tab');
+                const servicesMap = new Map();
+                
+                for (let i = 0; i < hostElements.length; i++) {
+                    const host = hostElements[i];
+                    let ipAddress = '';
+                    const addresses = host.getElementsByTagName('address');
+                    for (let j = 0; j < addresses.length; j++) {
+                        if (addresses[j].getAttribute('addrtype') === 'ipv4' || addresses[j].getAttribute('addrtype') === 'ipv6') {
+                            ipAddress = addresses[j].getAttribute('addr');
+                            break;
+                        }
+                    }
+                     if (!ipAddress) ipAddress = "N/A";
+                    
+                    const ports = host.getElementsByTagName('port');
+                    for (let j = 0; j < ports.length; j++) {
+                        const port = ports[j];
+                        const portId = port.getAttribute('portid');
+                        const protocol = port.getAttribute('protocol');
+                        const stateElement = port.getElementsByTagName('state')[0];
+                        const state = stateElement ? stateElement.getAttribute('state') : 'unknown';
+                        
+                        if (state !== 'open') continue; // Apenas portas abertas para a guia de serviços
+                        
+                        const serviceElement = port.getElementsByTagName('service')[0];
+                        if (!serviceElement) continue;
+                        
+                        const serviceName = serviceElement.getAttribute('name') || 'unknown';
+                        const product = serviceElement.getAttribute('product') || '';
+                        const version = serviceElement.getAttribute('version') || '';
+                        
+                        if (!servicesMap.has(serviceName)) {
+                            servicesMap.set(serviceName, []);
+                        }
+                        
+                        servicesMap.get(serviceName).push({
+                            ip: ipAddress,
+                            port: portId,
+                            protocol: protocol,
+                            product: product,
+                            version: version
+                        });
+                    }
+                }
+                
+                // Atualizar contagem de serviços na guia
+                const servicesTabButton = tabContainer.querySelector('.tab-button[data-tab="services"]');
+                if(servicesTabButton) servicesTabButton.textContent = `Serviços (${servicesMap.size})`;
+
+
+                if (servicesMap.size === 0) {
+                    servicesTab.innerHTML = "<p>Nenhum serviço (em portas abertas) identificado.</p>";
+                } else {
+                    // Ordenar serviços por nome para exibição consistente
+                    const sortedServices = new Map([...servicesMap.entries()].sort());
+
+                    for (const [service, instances] of sortedServices) {
+                        const serviceSection = document.createElement('div');
+                        serviceSection.className = 'host'; // Reusing .host class for consistent styling
+                        
+                        const serviceHeader = document.createElement('div');
+                        serviceHeader.className = 'host-header';
+                        serviceHeader.innerHTML = `<h3>${service} (${instances.length} instâncias)</h3>`;
+                        
+                        const serviceBody = document.createElement('div');
+                        serviceBody.className = 'host-body';
+                        serviceBody.style.display = 'none'; // Inicia oculto
+                        
+                        const tableContainer = document.createElement('div');
+                        tableContainer.className = 'table-container';
+                        tableContainer.innerHTML = `
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>IP do Host</th>
+                                        <th>Porta</th>
+                                        <th>Protocolo</th>
+                                        <th>Produto</th>
+                                        <th>Versão</th>
+                                    </tr>
+                                </thead>
+                                <tbody></tbody>
+                            </table>
+                        `;
+                        
+                        const tbody = tableContainer.querySelector('tbody');
+                        
+                        for (const instance of instances) {
+                            const row = document.createElement('tr');
+                            row.innerHTML = `
+                                <td>${instance.ip}</td>
+                                <td>${instance.port}</td>
+                                <td>${instance.protocol}</td>
+                                <td>${instance.product || 'N/A'}</td>
+                                <td>${instance.version || 'N/A'}</td>
+                            `;
+                            tbody.appendChild(row);
+                        }
+                        
+                        serviceBody.appendChild(tableContainer);
+                        serviceSection.appendChild(serviceHeader);
+                        serviceSection.appendChild(serviceBody);
+                        servicesTab.appendChild(serviceSection);
+                        
+                        // Adicionar evento de clique para mostrar/ocultar detalhes do serviço
+                        serviceHeader.addEventListener('click', function() {
+                            serviceBody.style.display = serviceBody.style.display === 'block' ? 'none' : 'block';
+                        });
+                    }
+                }
+            } // Fim da função displayResults
+        }); // Fim do DOMContentLoaded
+    </script>
+</body>
+</html>
