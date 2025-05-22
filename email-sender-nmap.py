@@ -5,12 +5,13 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import formatdate  # Correção: importar formatdate do email.utils
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
 # --- Configurações ---
-NMAP_TARGETS = "192.168.1.0/24"
-NMAP_ARGS = "-sS -sV -O --osscan-guess"
+NMAP_TARGETS = "192.168.56.0/24"
+NMAP_ARGS = "-sS -sV -O -T5 --osscan-guess"
 OUTPUT_XML_FILE = "nmap_scan_report.xml"
 LOG_FILE = "nmap_email_log.txt"
 
@@ -19,7 +20,7 @@ LOG_FILE = "nmap_email_log.txt"
 # mas smtplib.SMTP('localhost') usará a porta padrão 25.
 EMAIL_SENDER_ADDRESS = f'nmap-reporter@{os.uname()[1]}' # Ex: nmap-reporter@nomedasuavm
 # EMAIL_SENDER_PASSWORD não é necessário para Postfix local sem autenticação
-EMAIL_RECEIVER_ADDRESS = 'seu_email_de_destino@exemplo.com' # O seu e-mail principal
+EMAIL_RECEIVER_ADDRESS = 'EMAIL@GMAIL.COM'
 EMAIL_SUBJECT_PREFIX = "Relatório Nmap Scan"
 
 # --- Funções Auxiliares (log_message, run_nmap_scan, get_element_text, parse_nmap_xml_to_html) ---
@@ -213,13 +214,13 @@ def parse_nmap_xml_to_html(xml_file):
                     state = get_element_text(port_detail, 'state', 'state', 'N/A')
                     service_elem = port_detail.find('service')
                     service_name = get_element_text(service_elem, 'name', default='N/A') if service_elem is not None else 'N/A'
-                    
+
                     product_version_parts = [] # Renomeado para evitar conflito
                     if service_elem is not None:
                         if service_elem.get('product'): product_version_parts.append(service_elem.get('product'))
                         if service_elem.get('version'): product_version_parts.append(service_elem.get('version'))
                         if service_elem.get('extrainfo'): product_version_parts.append(f"({service_elem.get('extrainfo')})")
-                    
+
                     version_str = " ".join(product_version_parts) if product_version_parts else "N/A"
 
                     port_class = "port-open" # Já filtramos para open
@@ -247,8 +248,8 @@ def send_email(subject, html_body, attachment_path=None):
         msg['From'] = EMAIL_SENDER_ADDRESS
         msg['To'] = EMAIL_RECEIVER_ADDRESS
         msg['Subject'] = f"{EMAIL_SUBJECT_PREFIX}: {subject} ({datetime.now().strftime('%Y-%m-%d %H:%M')})"
-        # Adiciona o cabeçalho Date para melhor conformidade
-        msg['Date'] = encoders.formatdate(localtime=True)
+        # Adiciona o cabeçalho Date para melhor conformidade - CORREÇÃO AQUI
+        msg['Date'] = formatdate(localtime=True)  # Usando formatdate do email.utils
 
 
         # Garante que o corpo do e-mail seja tratado como UTF-8
