@@ -11,7 +11,7 @@ from datetime import datetime
 
 # --- Configurações ---
 NMAP_TARGETS = "192.168.56.0/24"
-NMAP_ARGS = "-sS -sV -O -T5 --osscan-guess"
+NMAP_ARGS = "-sS -sV -O -T5 -Pn --osscan-guess"
 OUTPUT_XML_FILE = "nmap_scan_report.xml"
 LOG_FILE = "nmap_email_log.txt"
 
